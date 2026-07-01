@@ -1,57 +1,46 @@
 import Link from "next/link";
 import SiteNav from "../components/SiteNav";
+import { prisma } from "../../lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Blog · FB AutoReply AI",
+  title: "Blog · ListToLead AI",
   description: "Tips, guides, and updates on selling faster on Facebook Marketplace.",
 };
 
-const POSTS = [
-  {
-    slug: "#",
-    title: "How instant AI replies win more Marketplace buyers",
-    excerpt:
-      "Buyers message several sellers at once. The first genuine reply usually gets the sale — here's how automation keeps you first.",
-    date: "June 2026",
-    tag: "Guide",
-  },
-  {
-    slug: "#",
-    title: "Lead scoring 101: spotting serious buyers fast",
-    excerpt:
-      "Not every 'is this available?' is equal. Learn how lead scoring ranks your conversations so you focus on the ready-to-buy ones.",
-    date: "May 2026",
-    tag: "Product",
-  },
-  {
-    slug: "#",
-    title: "5 message templates that close Marketplace deals",
-    excerpt:
-      "Copy-and-adapt scripts for price questions, pickup logistics, and holds — the moments where deals are won or lost.",
-    date: "April 2026",
-    tag: "Playbook",
-  },
-];
+function formatDate(date) {
+  return new Date(date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const posts = await prisma.blogPost.findMany({
+    where: { published: true },
+    orderBy: { createdAt: "desc" },
+  });
+
   return (
     <>
       <SiteNav />
       <div className="wide-container">
         <p className="eyebrow">Blog</p>
         <h1>Sell faster on Facebook Marketplace</h1>
-        <p className="sub">Tips, guides, and product updates from the FB AutoReply AI team.</p>
+        <p className="sub">Tips, guides, and product updates from the ListToLead AI team.</p>
 
-        <div className="blog-grid">
-          {POSTS.map((post) => (
-            <Link key={post.title} href={post.slug} className="card blog-card">
-              <span className="blog-tag">{post.tag}</span>
-              <h2>{post.title}</h2>
-              <p className="muted">{post.excerpt}</p>
-              <p className="foot-note" style={{ textAlign: "left", marginTop: 16 }}>{post.date}</p>
-            </Link>
-          ))}
-        </div>
+        {posts.length === 0 ? (
+          <p className="muted">No posts yet — check back soon.</p>
+        ) : (
+          <div className="blog-grid">
+            {posts.map((post) => (
+              <Link key={post.id} href={`/blog/${post.slug}`} className="card blog-card">
+                {post.tag && <span className="blog-tag">{post.tag}</span>}
+                <h2>{post.title}</h2>
+                <p className="muted">{post.excerpt || post.description.slice(0, 160)}</p>
+                <p className="foot-note" style={{ textAlign: "left", marginTop: 16 }}>{formatDate(post.createdAt)}</p>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

@@ -2,7 +2,7 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata = {
-  title: "FB AutoReply AI",
+  title: "ListToLead AI",
   description: "AI-powered auto reply and lead scoring for Facebook Marketplace.",
 };
 

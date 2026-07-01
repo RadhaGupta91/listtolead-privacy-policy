@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div className="container">
-      <p className="eyebrow">FB AutoReply AI</p>
+      <p className="eyebrow">ListToLead AI</p>
       <h1>Log in</h1>
       <p className="sub">Welcome back. Log in to manage your subscription and extension key.</p>
 

@@ -4,8 +4,9 @@ import { authOptions } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { generateRawToken, hashToken, last4Of } from "../../../../lib/tokens";
 
-// Generates a new extension token for the logged-in user.
-// The raw token is returned ONCE — only its hash is stored in the DB.
+// Generates (or regenerates) the single extension token for the logged-in user.
+// The raw token is returned ONCE — only its hash is stored on the user row.
+// Generating again replaces any existing token.
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -13,34 +14,39 @@ export async function POST() {
   }
 
   const rawToken = generateRawToken();
+  const createdAt = new Date();
 
-  const token = await prisma.apiToken.create({
+  await prisma.user.update({
+    where: { id: session.user.id },
     data: {
-      userId: session.user.id,
-      tokenHash: hashToken(rawToken),
-      last4: last4Of(rawToken),
+      apiTokenHash: hashToken(rawToken),
+      apiTokenLast4: last4Of(rawToken),
+      apiTokenCreatedAt: createdAt,
     },
   });
 
   return NextResponse.json({
-    id: token.id,
     token: rawToken, // shown once — the UI must warn the user to copy it now
-    createdAt: token.createdAt,
+    last4: last4Of(rawToken),
+    createdAt,
   });
 }
 
-// Lists (non-revoked) tokens for the dashboard, without exposing raw values.
+// Returns metadata about the user's current token (never the raw value).
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const tokens = await prisma.apiToken.findMany({
-    where: { userId: session.user.id, revokedAt: null },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, last4: true, createdAt: true, lastUsedAt: true },
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { apiTokenHash: true, apiTokenLast4: true, apiTokenCreatedAt: true },
   });
 
-  return NextResponse.json({ tokens });
+  const token = user?.apiTokenHash
+    ? { last4: user.apiTokenLast4, createdAt: user.apiTokenCreatedAt }
+    : null;
+
+  return NextResponse.json({ token });
 }

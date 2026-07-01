@@ -9,33 +9,200 @@ datasource db {
 }
 
 model User {
-  id                   String    @id @default(cuid())
-  name                 String?
-  email                String    @unique
-  passwordHash         String
-  createdAt            DateTime  @default(now())
+  id String @id @default(cuid())
+
+  // Profile
+  fname String?
+  lname String?
+  image String?
+  email String  @unique
+
+  // Role (references Role.slug) — defaults to "client" on signup.
+  // `role` is the FK column; `roleRef` is the relation navigation to Role.
+  role    String? @map("role")
+  roleRef Role?   @relation(fields: [role], references: [slug])
+  phoneCode        String? @map("phone_code")
+  contact          String?
+  gender           String?
+  profilePhotoPath String? @map("profile_photo_path") @db.Text
+
+  // Address
+  country      String?
+  state        String?
+  city         String?
+  streetName   String? @map("street_name")
+  streetNumber String? @map("street_number")
+  unitNo       String? @map("unit_no")
+  zipcode      String?
+  address      String?
+
+  // Social / links
+  websiteLink    String? @map("website_link") @db.Text
+  facebookLink   String? @map("facebook_link") @db.Text
+  instagramLink  String? @map("instagram_link") @db.Text
+  linkedinLink   String? @map("linkedin_link") @db.Text
+  twitterLink    String? @map("twitter_link") @db.Text
+  youtubeLink    String? @map("youtube_link") @db.Text
+  googleRating   String? @map("google_rating")
+  facebookRating String? @map("facebook_rating")
+
+  // Account / status (Laravel tinyInteger flags)
+  emailVerifiedAt         DateTime? @map("email_verified_at")
+  passwordHash            String // serves as the `password` column
+  emailConfirmationStatus Int       @default(0) @map("email_confirmation_status") @db.TinyInt
+  isReal                  Int       @default(1) @map("is_real") @db.TinyInt
+  public                  Int       @default(0) @db.TinyInt
+  active                  Int       @default(1) @db.TinyInt
+  currentTeamId           Int?      @map("current_team_id")
+
+  createdAt DateTime @default(now())
 
   // Stripe / subscription
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
   subscriptionStatus   String    @default("inactive") // inactive | trialing | active | past_due | canceled
-  plan                 String    @default("free")      // free | pro
+  plan                 String    @default("free") // free | pro
   currentPeriodEnd     DateTime?
 
-  tokens               ApiToken[]
+  // Extension API token — one per user. We store only the SHA-256 hash;
+  // last4 is shown in the dashboard. Nulled out when revoked (by the user or an admin).
+  apiTokenHash      String?   @unique @map("api_token_hash")
+  apiTokenLast4     String?   @map("api_token_last4")
+  apiTokenCreatedAt DateTime? @map("api_token_created_at")
+
+  listings Listing[]
 }
 
-model ApiToken {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+model BlogPost {
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  excerpt     String? @db.Text
+  description String  @db.Text // main body / full blog content
+  tag         String?
+  published   Boolean @default(true)
 
-  // We never store the raw token — only its SHA-256 hash.
-  tokenHash   String    @unique
-  // Last 4 characters shown in the dashboard so the user can identify the key.
-  last4       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  createdAt   DateTime  @default(now())
-  lastUsedAt  DateTime?
-  revokedAt   DateTime?
+model Menu {
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique
+  description String?
+  parentId    Int     @default(0) @map("parent_id")
+  url         String?
+  order       Int     @default(1)
+  icon        String  @default("fa fa-user")
+  menuGroup   String? @map("menu_group")
+  newWindow   Int     @default(1) @map("new_window") @db.TinyInt // Laravel enum [1,0]
+  status      Int     @default(1) @db.TinyInt // Laravel enum [1,0]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  roleMenus RoleMenu[]
+
+  @@map("menus")
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique
+  description String?
+  status      Int     @default(1) @db.TinyInt // Laravel enum [1,0]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+  roleMenus RoleMenu[]
+
+  @@map("roles")
+}
+
+model RoleMenu {
+  id       Int    @id @default(autoincrement())
+  roleSlug String @map("role_slug")
+  menuId   Int    @map("menu_id")
+
+  role Role @relation(fields: [roleSlug], references: [slug], onDelete: Cascade)
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([roleSlug, menuId])
+  @@map("role_menu")
+}
+
+model Plan {
+  id           Int     @id @default(autoincrement())
+  name         String
+  priceMonthly String  @map("price_monthly")
+  priceYearly  String  @map("price_yearly")
+  highlight    Boolean @default(false)
+  blurb        String? @db.Text
+  cta          String
+  href         String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  features PlanFeature[]
+
+  @@map("plans")
+}
+
+model PlanFeature {
+  id     Int    @id @default(autoincrement())
+  planId Int    @map("plan_id")
+  name   String
+  order  Int    @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("plan_features")
+}
+
+model Listing {
+  id     Int    @id @default(autoincrement())
+  userId String @map("user_id")
+
+  // Scraped listing detail — one column each.
+  listingId     String? @map("listing_id") // external MLS id, e.g. "C13148160"
+  saleLeaseType String? @map("sale_lease_type")
+  address       String? @db.Text
+  rentalType    String? @map("rental_type")
+  price         String?
+  beds          String?
+  baths         String?
+  sqft          Int?
+  laundry       String?
+  parking       String?
+  ac            String?
+  heatingSource String? @map("heating_source")
+  description   String? @db.Text
+  images        Json? // array of image URLs
+  availableDate String? @map("available_date")
+
+  // Extra fields.
+  facebookUrl              String? @map("facebook_url") @db.Text
+  listingUrl               String? @map("listing_url") @db.Text
+  descriptionForBot        String? @map("description_for_bot") @db.Text
+  customInstructionsForBot String? @map("custom_instructions_for_bot") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("modified_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One row per (user, external listing) — re-submitting updates in place.
+  @@unique([userId, listingId])
+  @@map("listings")
 }

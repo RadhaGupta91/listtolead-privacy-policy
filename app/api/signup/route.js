@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/prisma";
 
 export async function POST(req) {
   try {
-    const { name, email, password } = await req.json();
+    const { fname, lname, email, password } = await req.json();
 
     if (!email || !password || password.length < 8) {
       return NextResponse.json(
@@ -22,9 +22,11 @@ export async function POST(req) {
 
     const user = await prisma.user.create({
       data: {
-        name: name || null,
+        fname: fname || null,
+        lname: lname || null,
         email: email.toLowerCase(),
         passwordHash,
+        role: "client", // every new signup is a client by default
       },
     });
 

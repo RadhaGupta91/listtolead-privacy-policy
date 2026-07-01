@@ -3,28 +3,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 
-export async function POST(req) {
+// Revokes the logged-in user's own extension token by clearing it from their row.
+export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { tokenId } = await req.json();
-  if (!tokenId) {
-    return NextResponse.json({ error: "tokenId is required" }, { status: 400 });
-  }
-
-  // Ownership check — a user can only revoke their own tokens.
-  const token = await prisma.apiToken.findFirst({
-    where: { id: tokenId, userId: session.user.id },
-  });
-  if (!token) {
-    return NextResponse.json({ error: "Token not found" }, { status: 404 });
-  }
-
-  await prisma.apiToken.update({
-    where: { id: tokenId },
-    data: { revokedAt: new Date() },
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { apiTokenHash: null, apiTokenLast4: null, apiTokenCreatedAt: null },
   });
 
   return NextResponse.json({ revoked: true });

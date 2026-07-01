@@ -7,7 +7,8 @@ import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [fname, setFname] = useState("");
+  const [lname, setLname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -21,7 +22,7 @@ export default function SignupPage() {
     const res = await fetch("/api/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ fname, lname, email, password }),
     });
     const data = await res.json();
 
@@ -44,14 +45,17 @@ export default function SignupPage() {
 
   return (
     <div className="container">
-      <p className="eyebrow">FB AutoReply AI</p>
+      <p className="eyebrow">ListToLead AI</p>
       <h1>Create your account</h1>
       <p className="sub">Start free. Upgrade any time to enable the extension on live listings.</p>
 
       <div className="card">
         <form onSubmit={handleSubmit}>
-          <label htmlFor="name">Name</label>
-          <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jordan Lee" />
+          <label htmlFor="fname">First name</label>
+          <input id="fname" type="text" value={fname} onChange={(e) => setFname(e.target.value)} placeholder="Jordan" />
+
+          <label htmlFor="lname">Last name</label>
+          <input id="lname" type="text" value={lname} onChange={(e) => setLname(e.target.value)} placeholder="Lee" />
 
           <label htmlFor="email">Email</label>
           <input

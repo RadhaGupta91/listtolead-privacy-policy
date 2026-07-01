@@ -6,7 +6,7 @@ export default function HomePage() {
     <>
     <SiteNav />
     <div className="container" style={{ maxWidth: 560, textAlign: "center" }}>
-      <p className="eyebrow">FB AutoReply AI</p>
+      <p className="eyebrow">ListToLead AI</p>
       <h1>AI auto-replies for Facebook Marketplace</h1>
       <p className="sub">
         Never miss a buyer. Instant AI replies, lead scoring, and (coming soon) AI calling —
