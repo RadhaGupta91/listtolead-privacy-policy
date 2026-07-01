@@ -1,0 +1,41 @@
+// Prisma schema — run `npx prisma db push` after setting DATABASE_URL
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String    @id @default(cuid())
+  name                 String?
+  email                String    @unique
+  passwordHash         String
+  createdAt            DateTime  @default(now())
+
+  // Stripe / subscription
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  subscriptionStatus   String    @default("inactive") // inactive | trialing | active | past_due | canceled
+  plan                 String    @default("free")      // free | pro
+  currentPeriodEnd     DateTime?
+
+  tokens               ApiToken[]
+}
+
+model ApiToken {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // We never store the raw token — only its SHA-256 hash.
+  tokenHash   String    @unique
+  // Last 4 characters shown in the dashboard so the user can identify the key.
+  last4       String
+
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+}
